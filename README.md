@@ -70,6 +70,7 @@ npm start
 - **Image Processing**: react-easy-crop
 - **Video Processing**: FFmpeg.wasm
 - **Icons**: Lucide React
+- **Monetization**: Google AdSense
 
 ## 📁 프로젝트 구조
 
@@ -89,9 +90,37 @@ bloger_hyeoz/
 │   ├── VideoToGif.tsx       # 동영상 변환 컴포넌트
 │   ├── ImageSearch.tsx      # 이미지 검색 컴포넌트
 │   ├── TagGenerator.tsx     # 태그 생성 컴포넌트
-│   └── SeoTitleConverter.tsx # SEO 제목 컴포넌트
-└── FEATURES_AND_MONETIZATION.md  # 추가 기능 및 수익화 계획
+│   ├── SeoTitleConverter.tsx # SEO 제목 컴포넌트
+│   ├── AdSenseScript.tsx    # AdSense 스크립트
+│   └── AdBanner.tsx         # 광고 배너 컴포넌트
+├── public/
+│   └── ads.txt              # AdSense ads.txt 파일
+├── FEATURES_AND_MONETIZATION.md  # 추가 기능 및 수익화 계획
+└── ADSENSE_SETUP.md         # Google AdSense 설정 가이드
 ```
+
+## 💰 수익화 (Google AdSense)
+
+이 프로젝트는 Google AdSense를 통해 수익화가 가능합니다.
+
+### 빠른 시작
+
+1. `.env.local` 파일 생성:
+   ```bash
+   NEXT_PUBLIC_ADSENSE_ID=ca-pub-YOUR-ADSENSE-ID
+   ```
+
+2. 각 페이지의 광고 Slot ID 교체
+3. `public/ads.txt` 파일의 Publisher ID 교체
+
+### 자세한 설정 방법
+
+전체 설정 가이드는 [ADSENSE_SETUP.md](./ADSENSE_SETUP.md)를 참고하세요:
+- Google AdSense 계정 신청 방법
+- 광고 단위 생성 및 배치 전략
+- ads.txt 파일 설정
+- 수익 최적화 팁
+- 문제 해결 가이드
 
 ## 🎯 향후 계획
 
