@@ -1,4 +1,5 @@
 import ImageSearch from '@/components/ImageSearch';
+import AdBanner from '@/components/AdBanner';
 import { Image } from 'lucide-react';
 
 export default function ImageSearchPage() {
@@ -18,6 +19,15 @@ export default function ImageSearchPage() {
         </div>
 
         <ImageSearch />
+
+        {/* Ad Banner */}
+        <div className="mt-8">
+          <AdBanner
+            dataAdSlot="1234567893"
+            dataAdFormat="rectangle"
+            className="my-8"
+          />
+        </div>
       </div>
     </div>
   );

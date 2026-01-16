@@ -1,4 +1,5 @@
 import TagGenerator from '@/components/TagGenerator';
+import AdBanner from '@/components/AdBanner';
 import { Hash } from 'lucide-react';
 
 export default function TagGeneratorPage() {
@@ -18,6 +19,15 @@ export default function TagGeneratorPage() {
         </div>
 
         <TagGenerator />
+
+        {/* Ad Banner */}
+        <div className="mt-8">
+          <AdBanner
+            dataAdSlot="1234567894"
+            dataAdFormat="rectangle"
+            className="my-8"
+          />
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import VideoToGif from '@/components/VideoToGif';
+import AdBanner from '@/components/AdBanner';
 import { FileVideo } from 'lucide-react';
 
 export default function VideoToGifPage() {
@@ -35,6 +36,15 @@ export default function VideoToGifPage() {
               짧은 클립(5-10초)을 사용하면 가장 좋은 결과를 얻을 수 있습니다.
             </p>
           </div>
+        </div>
+
+        {/* Ad Banner */}
+        <div className="mt-8">
+          <AdBanner
+            dataAdSlot="1234567892"
+            dataAdFormat="rectangle"
+            className="my-8"
+          />
         </div>
       </div>
     </div>

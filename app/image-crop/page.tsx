@@ -1,4 +1,5 @@
 import ImageCropper from '@/components/ImageCropper';
+import AdBanner from '@/components/AdBanner';
 import { Scissors } from 'lucide-react';
 
 export default function ImageCropPage() {
@@ -29,6 +30,15 @@ export default function ImageCropPage() {
             <li>• 슬라이더를 사용하여 확대/축소할 수 있습니다</li>
             <li>• 다운로드 버튼을 클릭하여 원형으로 크롭된 이미지를 저장합니다</li>
           </ul>
+        </div>
+
+        {/* Ad Banner */}
+        <div className="mt-8">
+          <AdBanner
+            dataAdSlot="1234567891"
+            dataAdFormat="rectangle"
+            className="my-8"
+          />
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Scissors, FileVideo, Image, Hash, Type, Sparkles } from "lucide-react";
+import AdBanner from "@/components/AdBanner";
 
 const tools = [
   {
@@ -78,6 +79,15 @@ export default function Home() {
               </Link>
             );
           })}
+        </div>
+
+        {/* Ad Banner - Below Tools */}
+        <div className="mt-12">
+          <AdBanner
+            dataAdSlot="1234567890"
+            dataAdFormat="horizontal"
+            className="my-8"
+          />
         </div>
 
         {/* Info Section */}

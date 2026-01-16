@@ -1,4 +1,5 @@
 import SeoTitleConverter from '@/components/SeoTitleConverter';
+import AdBanner from '@/components/AdBanner';
 import { Type } from 'lucide-react';
 
 export default function SeoTitlePage() {
@@ -18,6 +19,15 @@ export default function SeoTitlePage() {
         </div>
 
         <SeoTitleConverter />
+
+        {/* Ad Banner */}
+        <div className="mt-8">
+          <AdBanner
+            dataAdSlot="1234567895"
+            dataAdFormat="rectangle"
+            className="my-8"
+          />
+        </div>
       </div>
     </div>
   );

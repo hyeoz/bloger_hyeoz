@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
+import AdSenseScript from "@/components/AdSenseScript";
 
 export const metadata: Metadata = {
   title: "블로그 도우미 - Blog Helper Tool",
@@ -14,6 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
+      <head>
+        <AdSenseScript />
+      </head>
       <body className="antialiased">
         <Navigation />
         <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
