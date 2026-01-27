@@ -39,10 +39,15 @@ async function callGemini(prompt: string, apiKey: string) {
 export async function POST(request: NextRequest) {
   try {
     const body: GeminiRequest = await request.json();
-    const apiKey = request.headers.get('x-api-key');
+
+    // Use environment variable for API key
+    const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'API key is required' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'GEMINI_API_KEY 환경변수가 설정되지 않았습니다. .env.local 파일을 확인해주세요.' },
+        { status: 500 }
+      );
     }
 
     let prompt = '';
