@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { Sparkles, Lightbulb, Copy, Check, Loader2, Key, AlertCircle } from 'lucide-react';
 
 interface Topic {
   title: string;
   description: string;
   category: string;
   keywords: string[];
+  outline?: string[];
 }
 
 const topicDatabase: { [key: string]: Topic[] } = {
@@ -53,6 +55,14 @@ export default function BlogTopicRecommendation() {
   const [keywords, setKeywords] = useState('');
   const [recommendations, setRecommendations] = useState<Topic[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  // AI Mode states
+  const [useAI, setUseAI] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const categories = [
     { value: 'technology', label: '기술/IT' },
@@ -63,7 +73,54 @@ export default function BlogTopicRecommendation() {
     { value: 'personal_development', label: '자기계발' },
   ];
 
+  const generateWithAI = async () => {
+    if (!apiKey) {
+      setError('Gemini API 키를 입력해주세요.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          type: 'topic',
+          category: category ? categories.find(c => c.value === category)?.label : '',
+          keywords: keywords,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'AI 요청 실패');
+      }
+
+      if (Array.isArray(data.data)) {
+        setRecommendations(data.data);
+      } else if (data.data?.raw) {
+        setError('AI 응답을 파싱할 수 없습니다. 다시 시도해주세요.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const generateRecommendations = () => {
+    if (useAI) {
+      generateWithAI();
+      return;
+    }
+
+    // Local mode
     let topics: Topic[] = [];
 
     if (category) {
@@ -94,20 +151,85 @@ export default function BlogTopicRecommendation() {
     setKeywords('');
     setRecommendations([]);
     setSelectedTopic(null);
+    setError(null);
   };
 
-  const copyToClipboard = (topic: Topic) => {
-    const text = `제목: ${topic.title}\n\n${topic.description}\n\n카테고리: ${topic.category}\n키워드: ${topic.keywords.join(', ')}`;
+  const copyToClipboard = (topic: Topic, index: number) => {
+    let text = `제목: ${topic.title}\n\n${topic.description}\n\n카테고리: ${topic.category}\n키워드: ${topic.keywords.join(', ')}`;
+    if (topic.outline && topic.outline.length > 0) {
+      text += `\n\n목차 제안:\n${topic.outline.map((item, i) => `${i + 1}. ${item}`).join('\n')}`;
+    }
     navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000);
   };
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">
-        AI 블로그 주제 추천
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+          <Lightbulb className="w-7 h-7 text-yellow-500" />
+          AI 블로그 주제 추천
+        </h2>
+
+        {/* AI Toggle */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600 dark:text-gray-400">AI 모드</span>
+          <button
+            onClick={() => setUseAI(!useAI)}
+            className={`relative w-14 h-7 rounded-full transition-colors ${
+              useAI ? 'bg-purple-600' : 'bg-gray-300 dark:bg-gray-600'
+            }`}
+          >
+            <div
+              className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
+                useAI ? 'translate-x-8' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
 
       <div className="space-y-6">
+        {/* AI API Key Input */}
+        {useAI && (
+          <div className="p-4 bg-purple-50 dark:bg-purple-900/30 rounded-lg border border-purple-200 dark:border-purple-800">
+            <label className="block text-sm font-medium text-purple-700 dark:text-purple-300 mb-2 flex items-center gap-2">
+              <Key className="w-4 h-4" />
+              Gemini API 키
+            </label>
+            <div className="relative">
+              <input
+                type={showApiKey ? 'text' : 'password'}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="AIzaSy..."
+                className="w-full px-4 py-2 pr-20 border border-purple-300 dark:border-purple-600 rounded-md
+                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                         focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-purple-600 dark:text-purple-400 hover:underline"
+              >
+                {showApiKey ? '숨기기' : '보기'}
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-purple-600 dark:text-purple-400">
+              Google AI Studio에서 API 키를 발급받으세요: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="underline">aistudio.google.com/apikey</a>
+            </p>
+          </div>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <div className="p-4 bg-red-50 dark:bg-red-900/30 rounded-lg border border-red-200 dark:border-red-800 flex items-start gap-2">
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <p className="text-red-700 dark:text-red-300 text-sm">{error}</p>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             카테고리 선택 (선택사항)
@@ -144,10 +266,25 @@ export default function BlogTopicRecommendation() {
         <div className="flex gap-3">
           <button
             onClick={generateRecommendations}
-            className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg
-                     transition-colors duration-200 shadow-md hover:shadow-lg"
+            disabled={isLoading}
+            className={`flex-1 px-6 py-3 font-semibold rounded-lg
+                     transition-colors duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2
+                     ${useAI
+                       ? 'bg-purple-600 hover:bg-purple-700 text-white disabled:bg-purple-400'
+                       : 'bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-400'
+                     }`}
           >
-            주제 추천 받기
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                AI가 생성 중...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5" />
+                {useAI ? 'AI로 주제 추천 받기' : '주제 추천 받기'}
+              </>
+            )}
           </button>
           <button
             onClick={handleReset}
@@ -160,29 +297,47 @@ export default function BlogTopicRecommendation() {
 
         {recommendations.length > 0 && (
           <div className="space-y-4">
-            <h3 className="text-xl font-semibold text-gray-800 dark:text-white">
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+              {useAI && <Sparkles className="w-5 h-5 text-purple-500" />}
               추천 주제 ({recommendations.length}개)
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {recommendations.map((topic, index) => (
                 <div
                   key={index}
-                  className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg
-                           hover:shadow-md transition-shadow cursor-pointer
-                           bg-white dark:bg-gray-900"
+                  className={`p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer
+                           bg-white dark:bg-gray-900 ${
+                             selectedTopic === topic
+                               ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800'
+                               : 'border-gray-200 dark:border-gray-700'
+                           }`}
                   onClick={() => setSelectedTopic(topic)}
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <h4 className="font-semibold text-gray-800 dark:text-white">
+                    <h4 className="font-semibold text-gray-800 dark:text-white pr-2">
                       {topic.title}
                     </h4>
-                    <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
+                    <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded flex-shrink-0">
                       {topic.category}
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                     {topic.description}
                   </p>
+
+                  {/* Outline preview for AI mode */}
+                  {topic.outline && topic.outline.length > 0 && (
+                    <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">목차 미리보기:</span>
+                      <ul className="mt-1 text-gray-600 dark:text-gray-400">
+                        {topic.outline.slice(0, 3).map((item, i) => (
+                          <li key={i}>• {item}</li>
+                        ))}
+                        {topic.outline.length > 3 && <li>...</li>}
+                      </ul>
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap gap-1">
                     {topic.keywords.map((keyword, i) => (
                       <span
@@ -196,12 +351,22 @@ export default function BlogTopicRecommendation() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      copyToClipboard(topic);
+                      copyToClipboard(topic, index);
                     }}
                     className="mt-3 w-full px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded
-                             transition-colors duration-200"
+                             transition-colors duration-200 flex items-center justify-center gap-2"
                   >
-                    복사하기
+                    {copiedIndex === index ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        복사됨
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        복사하기
+                      </>
+                    )}
                   </button>
                 </div>
               ))}
@@ -220,6 +385,21 @@ export default function BlogTopicRecommendation() {
             <p className="text-gray-700 dark:text-gray-300 mb-4">
               {selectedTopic.description}
             </p>
+
+            {/* Outline for selected topic */}
+            {selectedTopic.outline && selectedTopic.outline.length > 0 && (
+              <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">추천 목차:</span>
+                <ol className="mt-2 space-y-1">
+                  {selectedTopic.outline.map((item, i) => (
+                    <li key={i} className="text-gray-600 dark:text-gray-400">
+                      {i + 1}. {item}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
             <div className="space-y-2">
               <div className="text-sm">
                 <span className="font-semibold text-gray-700 dark:text-gray-300">카테고리:</span>
@@ -242,13 +422,15 @@ export default function BlogTopicRecommendation() {
           </div>
         )}
 
-        {recommendations.length === 0 && (
+        {recommendations.length === 0 && !isLoading && (
           <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-lg text-center">
             <p className="text-gray-600 dark:text-gray-400 mb-2">
               카테고리나 키워드를 선택하고 "주제 추천 받기" 버튼을 클릭하세요.
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-500">
-              💡 아무것도 선택하지 않으면 모든 카테고리에서 랜덤으로 추천합니다.
+              {useAI
+                ? '✨ AI 모드: Gemini AI가 트렌디한 주제를 실시간으로 생성합니다.'
+                : '💡 아무것도 선택하지 않으면 모든 카테고리에서 랜덤으로 추천합니다.'}
             </p>
           </div>
         )}
