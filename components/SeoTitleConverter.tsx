@@ -1,7 +1,16 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Type, Copy, Check, Sparkles, RefreshCw, Loader2, AlertCircle, TrendingUp } from 'lucide-react';
+import { useState } from "react";
+import {
+  Type,
+  Copy,
+  Check,
+  Sparkles,
+  RefreshCw,
+  Loader2,
+  AlertCircle,
+  TrendingUp,
+} from "lucide-react";
 
 interface AISuggestion {
   title: string;
@@ -17,7 +26,7 @@ interface AISeoResult {
 }
 
 export default function SeoTitleConverter() {
-  const [originalTitle, setOriginalTitle] = useState('');
+  const [originalTitle, setOriginalTitle] = useState("");
   const [suggestions, setSuggestions] = useState<AISuggestion[]>([]);
   const [metaDescription, setMetaDescription] = useState<string | null>(null);
   const [seoKeywordsResult, setSeoKeywordsResult] = useState<string[]>([]);
@@ -27,7 +36,7 @@ export default function SeoTitleConverter() {
 
   const generateSuggestions = async () => {
     if (!originalTitle.trim()) {
-      setError('원본 제목을 입력해주세요.');
+      setError("원본 제목을 입력해주세요.");
       return;
     }
 
@@ -35,33 +44,35 @@ export default function SeoTitleConverter() {
     setError(null);
 
     try {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
+      const response = await fetch("/api/ai", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          type: 'seo',
+          type: "seo",
           title: originalTitle,
         }),
       });
-
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'AI 요청 실패');
+        throw new Error(data.error || "AI 요청 실패");
       }
 
-      const result = data.data as AISeoResult;
-      if (result.suggestions && Array.isArray(result.suggestions)) {
+      const result = data.data;
+
+      if (result?.suggestions && Array.isArray(result.suggestions)) {
         setSuggestions(result.suggestions);
         setMetaDescription(result.metaDescription || null);
         setSeoKeywordsResult(result.keywords || []);
-      } else if (data.data?.raw) {
-        setError('AI 응답을 파싱할 수 없습니다. 다시 시도해주세요.');
+      } else {
+        setError("AI 응답을 파싱할 수 없습니다. 다시 시도해주세요.");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
+      setError(
+        err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -234,7 +245,9 @@ export default function SeoTitleConverter() {
           AI SEO 기능
         </h3>
         <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
-          <li>• Gemini AI가 트렌드와 검색 패턴을 분석하여 SEO 최적화 제목 생성</li>
+          <li>
+            • Gemini AI가 트렌드와 검색 패턴을 분석하여 SEO 최적화 제목 생성
+          </li>
           <li>• 각 제목에 대한 예상 클릭률 점수 제공</li>
           <li>• 추천 메타 설명 자동 생성</li>
           <li>• 핵심 SEO 키워드 추출</li>
@@ -249,17 +262,25 @@ export default function SeoTitleConverter() {
         </h3>
         <div className="space-y-3">
           <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
-            <p className="text-sm text-zinc-500 dark:text-zinc-500 mb-1">변환 전</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-500 mb-1">
+              변환 전
+            </p>
             <p className="text-zinc-900 dark:text-zinc-50">제주도 여행</p>
-            <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-2 mb-1">변환 후</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-2 mb-1">
+              변환 후
+            </p>
             <p className="text-purple-600 dark:text-purple-400 font-medium">
               제주도 여행 완벽 가이드 | 2026년 최신 BEST 10
             </p>
           </div>
           <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
-            <p className="text-sm text-zinc-500 dark:text-zinc-500 mb-1">변환 전</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-500 mb-1">
+              변환 전
+            </p>
             <p className="text-zinc-900 dark:text-zinc-50">다이어트 방법</p>
-            <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-2 mb-1">변환 후</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-2 mb-1">
+              변환 후
+            </p>
             <p className="text-purple-600 dark:text-purple-400 font-medium">
               다이어트 방법 꿀팁 대방출 | 효과적인 7가지 방법
             </p>
