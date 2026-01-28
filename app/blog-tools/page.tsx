@@ -4,13 +4,15 @@ import { useState } from 'react';
 import WatermarkEditor from '@/components/WatermarkEditor';
 import CharacterCounter from '@/components/CharacterCounter';
 import BlogTopicRecommendation from '@/components/BlogTopicRecommendation';
+import TrendingKeywords from '@/components/TrendingKeywords';
 
-type TabType = 'watermark' | 'counter' | 'topics';
+type TabType = 'trends' | 'topics' | 'counter' | 'watermark';
 
 export default function BlogToolsPage() {
-  const [activeTab, setActiveTab] = useState<TabType>('topics');
+  const [activeTab, setActiveTab] = useState<TabType>('trends');
 
   const tabs = [
+    { id: 'trends' as TabType, label: '트렌드 키워드', icon: '📈' },
     { id: 'topics' as TabType, label: 'AI 주제 추천', icon: '🤖' },
     { id: 'counter' as TabType, label: '글자수 계산기', icon: '📝' },
     { id: 'watermark' as TabType, label: '워터마크', icon: '🖼️' },
@@ -48,9 +50,10 @@ export default function BlogToolsPage() {
         </div>
 
         <div className="transition-all duration-300">
-          {activeTab === 'watermark' && <WatermarkEditor />}
-          {activeTab === 'counter' && <CharacterCounter />}
+          {activeTab === 'trends' && <TrendingKeywords />}
           {activeTab === 'topics' && <BlogTopicRecommendation />}
+          {activeTab === 'counter' && <CharacterCounter />}
+          {activeTab === 'watermark' && <WatermarkEditor />}
         </div>
       </div>
     </div>
