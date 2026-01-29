@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Minus, Sparkles, RefreshCw, Search, Copy, Check } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { TrendingUp, TrendingDown, Minus, Sparkles, RefreshCw, Search, Copy, Check, Clock, BarChart3 } from 'lucide-react';
 
 interface TrendKeyword {
   rank: number;
@@ -9,13 +9,17 @@ interface TrendKeyword {
   change: 'up' | 'down' | 'new' | 'same';
   changeRank?: number;
   searchVolume?: number;
+  monthlyPcQcCnt?: number;
+  monthlyMobileQcCnt?: number;
   category?: string;
+  compIdx?: string;
 }
 
 interface TrendCategory {
   id: string;
   name: string;
   icon: string;
+  description: string;
   keywords: TrendKeyword[];
 }
 
@@ -27,23 +31,6 @@ interface TrendResponse {
   lastUpdated: string;
 }
 
-interface AnalyzeResultItem {
-  keyword: string;
-  popularity: number;
-  trend: 'up' | 'down';
-}
-
-interface AnalyzeResult {
-  success: boolean;
-  source: string;
-  message?: string;
-  data: {
-    keywords: string[];
-    trend: AnalyzeResultItem[];
-  };
-  lastUpdated: string;
-}
-
 export default function TrendingKeywords() {
   const [trendData, setTrendData] = useState<TrendCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,16 +38,12 @@ export default function TrendingKeywords() {
   const [source, setSource] = useState<string>('');
   const [message, setMessage] = useState<string>('');
   const [lastUpdated, setLastUpdated] = useState<string>('');
-  const [activeCategory, setActiveCategory] = useState<string>('realtime');
+  const [activeCategory, setActiveCategory] = useState<string>('popular');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [copiedKeyword, setCopiedKeyword] = useState<string | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(false);
 
-  // 키워드 검색 분석 상태
-  const [analyzeKeywords, setAnalyzeKeywords] = useState('');
-  const [analyzeResult, setAnalyzeResult] = useState<AnalyzeResult | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
-
-  const fetchTrends = async () => {
+  const fetchTrends = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -73,7 +56,7 @@ export default function TrendingKeywords() {
         setSource(data.source);
         setMessage(data.message || '');
         setLastUpdated(data.lastUpdated);
-        if (data.data.length > 0) {
+        if (data.data.length > 0 && !activeCategory) {
           setActiveCategory(data.data[0].id);
         }
       } else {
@@ -84,35 +67,34 @@ export default function TrendingKeywords() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeCategory]);
 
   useEffect(() => {
     fetchTrends();
-  }, []);
+  }, [fetchTrends]);
 
-  const analyzeKeywordTrend = async () => {
-    if (!analyzeKeywords.trim()) return;
+  // 자동 새로고침 (10분 간격)
+  useEffect(() => {
+    if (!autoRefresh) return;
 
-    setAnalyzing(true);
-    try {
-      const keywords = analyzeKeywords.split(',').map(k => k.trim()).filter(k => k);
-      const response = await fetch('/api/trends', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keywords }),
-      });
-      const data = await response.json();
-      setAnalyzeResult(data);
-    } catch (err) {
-      console.error('Analysis error:', err);
-    } finally {
-      setAnalyzing(false);
-    }
-  };
+    const interval = setInterval(() => {
+      fetchTrends();
+    }, 10 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, fetchTrends]);
 
   const copyKeyword = (keyword: string) => {
     navigator.clipboard.writeText(keyword);
     setCopiedKeyword(keyword);
+    setTimeout(() => setCopiedKeyword(null), 2000);
+  };
+
+  const copyAllKeywords = () => {
+    if (!activeData) return;
+    const keywords = activeData.keywords.map(k => k.keyword).join(', ');
+    navigator.clipboard.writeText(keywords);
+    setCopiedKeyword('all');
     setTimeout(() => setCopiedKeyword(null), 2000);
   };
 
@@ -146,6 +128,14 @@ export default function TrendingKeywords() {
       );
     }
     return null;
+  };
+
+  const formatSearchVolume = (volume?: number) => {
+    if (!volume) return null;
+    if (volume >= 10000) {
+      return `${(volume / 10000).toFixed(1)}만`;
+    }
+    return volume.toLocaleString();
   };
 
   const activeData = trendData.find(cat => cat.id === activeCategory);
@@ -183,21 +173,41 @@ export default function TrendingKeywords() {
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+      {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-          네이버 트렌드 키워드
-        </h2>
-        <button
-          onClick={fetchTrends}
-          className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700
-                   text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600
-                   transition-colors"
-        >
-          <RefreshCw className="w-4 h-4" />
-          새로고침
-        </button>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+            <BarChart3 className="w-7 h-7 text-blue-500" />
+            네이버 검색 트렌드
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            실시간 인기 검색어와 트렌드를 확인하세요
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+            />
+            자동 갱신
+          </label>
+          <button
+            onClick={fetchTrends}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700
+                     text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600
+                     transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            새로고침
+          </button>
+        </div>
       </div>
 
+      {/* API 소스 안내 */}
       {message && source === 'simulation' && (
         <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
           <p className="text-sm text-yellow-700 dark:text-yellow-300">
@@ -208,7 +218,7 @@ export default function TrendingKeywords() {
 
       {/* 카테고리 탭 */}
       <div className="mb-6 overflow-x-auto">
-        <div className="flex gap-2 min-w-max">
+        <div className="flex gap-2 min-w-max pb-2">
           {trendData.map((category) => (
             <button
               key={category.id}
@@ -226,20 +236,46 @@ export default function TrendingKeywords() {
         </div>
       </div>
 
-      {/* 검색 필터 */}
-      <div className="mb-4">
-        <div className="relative">
+      {/* 카테고리 설명 */}
+      {activeData && (
+        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <p className="text-sm text-blue-700 dark:text-blue-300">
+            {activeData.description}
+          </p>
+        </div>
+      )}
+
+      {/* 검색 및 복사 */}
+      <div className="mb-4 flex gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
-            placeholder="키워드 검색..."
+            placeholder="키워드 필터링..."
             className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
+        <button
+          onClick={copyAllKeywords}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700
+                   text-white font-medium rounded-lg transition-colors"
+        >
+          {copiedKeyword === 'all' ? (
+            <>
+              <Check className="w-4 h-4" />
+              복사됨
+            </>
+          ) : (
+            <>
+              <Copy className="w-4 h-4" />
+              전체 복사
+            </>
+          )}
+        </button>
       </div>
 
       {/* 키워드 목록 */}
@@ -253,13 +289,15 @@ export default function TrendingKeywords() {
             filteredKeywords.map((keyword) => (
               <div
                 key={`${keyword.rank}-${keyword.keyword}`}
+                onClick={() => copyKeyword(keyword.keyword)}
                 className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900
-                         rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+                         rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors
+                         cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
                   <span className={`w-8 h-8 flex items-center justify-center rounded-full font-bold text-sm
                     ${keyword.rank <= 3
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md'
                       : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                     }`}>
                     {keyword.rank}
@@ -280,22 +318,18 @@ export default function TrendingKeywords() {
                     </span>
                   )}
                   {keyword.searchVolume && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      검색량: {keyword.searchVolume.toLocaleString()}
+                    <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                      <BarChart3 className="w-3 h-3" />
+                      {formatSearchVolume(keyword.searchVolume)}
                     </span>
                   )}
-                  <button
-                    onClick={() => copyKeyword(keyword.keyword)}
-                    className="p-2 opacity-0 group-hover:opacity-100 transition-opacity
-                             hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-                    title="키워드 복사"
-                  >
+                  <span className="p-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400">
                     {copiedKeyword === keyword.keyword ? (
                       <Check className="w-4 h-4 text-green-500" />
                     ) : (
-                      <Copy className="w-4 h-4 text-gray-500" />
+                      <Copy className="w-4 h-4" />
                     )}
-                  </button>
+                  </span>
                 </div>
               </div>
             ))
@@ -303,87 +337,54 @@ export default function TrendingKeywords() {
         </div>
       )}
 
-      {/* 키워드 분석 섹션 */}
-      <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
-          키워드 트렌드 분석
-        </h3>
-        <div className="flex gap-3">
-          <input
-            type="text"
-            value={analyzeKeywords}
-            onChange={(e) => setAnalyzeKeywords(e.target.value)}
-            placeholder="분석할 키워드 입력 (쉼표로 구분, 최대 5개)"
-            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <button
-            onClick={analyzeKeywordTrend}
-            disabled={analyzing || !analyzeKeywords.trim()}
-            className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400
-                     text-white font-semibold rounded-lg transition-colors"
-          >
-            {analyzing ? '분석 중...' : '분석하기'}
-          </button>
-        </div>
-
-        {analyzeResult && (
-          <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-            <h4 className="font-medium text-gray-800 dark:text-white mb-3">분석 결과</h4>
-            {analyzeResult.data?.trend ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {analyzeResult.data.trend.map((item, index) => (
-                  <div
-                    key={index}
-                    className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-gray-800 dark:text-white">{item.keyword}</span>
-                      {item.trend === 'up' ? (
-                        <TrendingUp className="w-5 h-5 text-red-500" />
-                      ) : (
-                        <TrendingDown className="w-5 h-5 text-blue-500" />
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      인기도: {item.popularity}%
-                    </div>
-                    <div className="mt-2 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${item.trend === 'up' ? 'bg-red-500' : 'bg-blue-500'}`}
-                        style={{ width: `${item.popularity}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <pre className="text-sm text-gray-600 dark:text-gray-400 overflow-auto">
-                {JSON.stringify(analyzeResult, null, 2)}
-              </pre>
-            )}
-          </div>
-        )}
-      </div>
-
       {/* 마지막 업데이트 시간 */}
       {lastUpdated && (
-        <div className="mt-6 text-right text-sm text-gray-500 dark:text-gray-400">
+        <div className="mt-6 flex items-center justify-end gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <Clock className="w-4 h-4" />
           마지막 업데이트: {new Date(lastUpdated).toLocaleString('ko-KR')}
         </div>
       )}
 
-      {/* 안내 메시지 */}
-      <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-        <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">사용 팁</h4>
-        <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
-          <li>인기 키워드를 클릭하면 복사할 수 있습니다.</li>
-          <li>블로그 주제 선정 시 급상승 키워드를 참고하세요.</li>
-          <li>연령대별, 카테고리별 트렌드로 타겟 독자를 파악하세요.</li>
-          <li>네이버 API 키를 설정하면 실시간 데이터를 확인할 수 있습니다.</li>
+      {/* 사용 팁 */}
+      <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+        <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-3 flex items-center gap-2">
+          <Sparkles className="w-4 h-4" />
+          블로그 작성 팁
+        </h4>
+        <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-2">
+          <li className="flex items-start gap-2">
+            <span className="text-blue-500">•</span>
+            <span><strong>인기 검색어</strong>를 활용해 블로그 제목과 본문에 자연스럽게 포함하세요.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-blue-500">•</span>
+            <span><strong>급상승 키워드</strong>는 경쟁이 적고 유입이 많을 수 있어요.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-blue-500">•</span>
+            <span><strong>시즌 트렌드</strong>를 미리 파악해서 시의성 있는 콘텐츠를 준비하세요.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-blue-500">•</span>
+            <span>키워드를 클릭하면 복사되어 바로 활용할 수 있습니다.</span>
+          </li>
         </ul>
       </div>
+
+      {/* API 설정 안내 */}
+      {source === 'simulation' && (
+        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">실제 데이터 연동 방법</h4>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            네이버 API를 연동하면 실제 검색 트렌드 데이터를 확인할 수 있습니다.
+          </p>
+          <div className="text-xs text-gray-500 dark:text-gray-500 space-y-1">
+            <p><strong>1. 네이버 개발자 센터</strong>: developers.naver.com에서 애플리케이션 등록</p>
+            <p><strong>2. 네이버 검색광고</strong>: searchad.naver.com에서 API 키 발급 (검색량 조회용)</p>
+            <p><strong>3. .env 파일에 API 키 설정</strong></p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
