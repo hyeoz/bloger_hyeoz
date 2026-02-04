@@ -24,7 +24,6 @@ async function resolveGeminiModel(apiKey: string): Promise<string> {
     const data = (await res.json()) as {
       supportedGenerationMethods?: string[];
     };
-    console.log("api", data);
     // Be conservative: if API doesn't tell us supported methods, assume it's NOT supported.
     return Array.isArray(data.supportedGenerationMethods)
       ? data.supportedGenerationMethods.includes("generateContent")
